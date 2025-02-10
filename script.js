@@ -1,35 +1,48 @@
 (async function autoUnfollow() {
     const followButtonSelector = '.artdeco-button.artdeco-button--muted.artdeco-button--2.artdeco-button--secondary.ember-view';
-    const confirmPopupSelector = '.artdeco-modal__actionbar.artdeco-modal__actionbar--confirm-dialog.artdeco-modal__actionbar.ember-view';
     const confirmButtonSelector = '.artdeco-button.artdeco-button--2.artdeco-button--primary.ember-view';
 
-    let buttons = Array.from(document.querySelectorAll(followButtonSelector));
-    console.log(`✅ Found ${buttons.length} "Following" buttons`);
+    let totalUnfollowed = 0;
+    const maxUnfollows = 250;
 
-    for (let i = 0; i < buttons.length; i++) {
-        let button = buttons[i];
+    while (totalUnfollowed < maxUnfollows) {
+        let buttons = Array.from(document.querySelectorAll(followButtonSelector));
 
-        // Scroll into view and click the button
-        button.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        await new Promise(resolve => setTimeout(resolve, 500)); // Small delay
-        button.click();
-        console.log(`🟢 Clicked "Following" button ${i + 1}`);
-
-        // Wait for confirmation popup
-        let confirmPopup = await waitForElement(confirmPopupSelector, 2000);
-        if (confirmPopup) {
-            let confirmButton = confirmPopup.querySelector(confirmButtonSelector);
-            if (confirmButton) {
-                confirmButton.click();
-                console.log(`🔴 Confirmed unfollow ${i + 1}`);
-            }
+        if (buttons.length === 0) {
+            console.log("🔄 No more 'Following' buttons found, scrolling down...");
+            window.scrollBy(0, 1000); // Scroll down to load more
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for content to load
+            continue;
         }
 
-        // Wait before processing the next one
+        for (let i = 0; i < buttons.length && totalUnfollowed < maxUnfollows; i++) {
+            let button = buttons[i];
+
+            // Scroll into view and click the button
+            button.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            await new Promise(resolve => setTimeout(resolve, 500));
+            button.click();
+            console.log(`🟢 Clicked "Following" button ${totalUnfollowed + 1}`);
+
+            // Wait for confirmation popup
+            let confirmButton = await waitForElement(confirmButtonSelector, 3000);
+            if (confirmButton) {
+                confirmButton.click();
+                console.log(`🔴 Confirmed unfollow ${totalUnfollowed + 1}`);
+                totalUnfollowed++;
+            }
+
+            // Wait before processing the next one
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+
+        // Scroll to load more connections
+        window.scrollBy(0, 1000);
         await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
-    console.log("✅ Unfollow process completed!");
+    console.log(`✅ Unfollowed ${totalUnfollowed} connections!`);
+
 })();
 
 // Utility function to wait for an element
